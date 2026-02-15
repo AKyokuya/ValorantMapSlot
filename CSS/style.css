@@ -21,8 +21,6 @@ body{
   margin:0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
   background:
-    radial-gradient(900px 500px at 30% 10%, rgba(74,163,255,.20), transparent 60%),
-    radial-gradient(900px 500px at 70% 0%, rgba(124,241,255,.12), transparent 60%),
     var(--bg);
   color:var(--text);
 }
@@ -56,7 +54,7 @@ body{
 /* 3段表示：window高さ = item高さ × 3 */
 .window{
   position: relative;
-  width: min(640px, 100%);  /* ★ 少し広げる（16:9を見せやすく） */
+  width: min(400px, 100%);  /* ★ 少し広げる（16:9を見せやすく） */
   height: calc(var(--item-h) * 3);
   border-radius: 22px;
   overflow: hidden;
@@ -96,7 +94,7 @@ body{
   border-radius: 14px;               /* 角丸で見た目を整える */
 }
 
-/* 画像が無いときは名前表示（テスト運用OK） */
+/* 画像が無いときは名前表示 */
 .item .fallback{
   position:absolute;
   inset:0;
@@ -127,7 +125,7 @@ body{
   position:absolute;
   left:50%;
   transform: translateX(-50%);
-  width: min(640px, 100%);
+  width: min(400px, 100%);
   top:50%;
   height: var(--item-h);
   margin-top: calc(var(--item-h) / -2);
@@ -245,11 +243,10 @@ body{
   gap: 8px;
 }
 .mapCheckThumb{
-  width:72px;
-  height:44px;
+  width:240px;
+  height:136px;
   border-radius:8px;
   overflow:hidden;
-  flex: 0 0 72px;
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.16);
 }
@@ -281,6 +278,8 @@ body{
     --item-h: 200px;
     --img-pad: 8px;
   }
-  .window{ width: min(640px, 100%); }
+  .window{ width: min(400px, 100%); }
   .settings .grid{grid-template-columns: 1fr 1fr}
+  .mapCheckThumb{ width:120px; height:68px; }
+  .checksGrid{ grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 }

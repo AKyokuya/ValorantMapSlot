@@ -9,8 +9,7 @@
 <body>
   <main class="wrap">
     <header class="top">
-      <h1>VALORANT マップ抽選スロット（3段表示）</h1>
-      <p class="sub">SPINで回転、STOPで減速して中央が決定（候補はチェックしたものだけ）</p>
+      <h1>VALORANT マップ抽選スロット</h1>
     </header>
 
     <section class="panel">
@@ -29,15 +28,12 @@
       <!-- 表示（最終決定のみ） -->
       <div class="results">
         <div class="final">
-          <div class="label">最終決定（中央）:</div>
-          <div id="pickedName" class="picked">—</div>
         </div>
       </div>
 
       <div class="controls">
         <button id="spinBtn" class="btn primary">SPIN</button>
         <button id="stopBtn" class="btn" disabled>STOP</button>
-        <button id="rerollBtn" class="btn ghost">即決（回さず抽選）</button>
       </div>
 
       <!-- 設定 -->
@@ -47,12 +43,12 @@
         <div class="grid">
           <label>
             <span>減速時間（ms）</span>
-            <input id="decelMs" type="number" min="1000" max="12000" step="200" value="4200" />
+            <input id="decelMs" type="number" min="1000" max="12000" step="200" value="5200" />
           </label>
 
           <label>
             <span>初速（px/s）</span>
-            <input id="speedPx" type="number" min="600" max="9000" step="100" value="3800" />
+            <input id="speedPx" type="number" min="600" max="9000" step="100" value="5200" />
           </label>
 
           <label>
@@ -62,18 +58,11 @@
         </div>
 
         <div class="checks">
-          <div class="checksTitle">候補マップ（チェックしたものだけ抽選）</div>
+          <div class="checksTitle">マップ</div>
           <div id="mapChecks" class="checksGrid"></div>
           <div id="mapChecksNote" class="checksNote"></div>
-          <div class="checksHint">
-            ※ 回転中（SPIN〜STOP完了まで）は候補を変更できません。
-          </div>
         </div>
       </details>
-
-      <footer class="foot">
-        <small>※「競技プール」は時期で変わるので、必要に応じて初期ON候補を変更してください。</small>
-      </footer>
     </section>
   </main>
 

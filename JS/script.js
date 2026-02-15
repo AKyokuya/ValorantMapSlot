@@ -101,16 +101,14 @@ const ALL_MAPS = [
 
 // 指定プール（重複 sunset は Set で1つになります）
 const DEFAULT_ENABLED_KEYS = new Set([
-  "sunset","bind","haven","split","abyss","sunset","pearl","corrode"
+  "breeze","bind","haven","split","abyss","pearl","corrode"
 ]);
 
 // =====================================================
 // DOM
 // =====================================================
-const pickedName   = document.getElementById("pickedName");
 const spinBtn   = document.getElementById("spinBtn");
 const stopBtn   = document.getElementById("stopBtn");
-const rerollBtn = document.getElementById("rerollBtn");
 
 const decelMsInput = document.getElementById("decelMs");
 const speedPxInput = document.getElementById("speedPx");
@@ -142,17 +140,9 @@ function rebuildCompMapsFromChecks(){
 
 function updateMapChecksNote(){
   const n = COMP_MAPS.length;
-  if (n === 0) {
-    mapChecksNote.textContent = "最低1つはチェックしてください（候補が0だと回せません）";
-  } else if (n === 1) {
-    mapChecksNote.textContent = "候補が1つなので常にそれが中央に来ます（上/下も同じになります）";
-  } else {
-    mapChecksNote.textContent = `候補: ${n} 個`;
-  }
 
   const busy = (engine.state === "spinning" || engine.state === "smooth");
   spinBtn.disabled = busy ? true : (n === 0);
-  rerollBtn.disabled = (n === 0);
 }
 
 // =====================================================
@@ -289,13 +279,6 @@ function getCenteredMapName(){
   const midItem = centeredItemIndex();
   return COMP_MAPS[toMapIndex(midItem)]?.name ?? "—";
 }
-function renderCenterResult(){
-  pickedName.textContent = getCenteredMapName();
-}
-
-function clearResults(){
-  pickedName.textContent = "—";
-}
 
 // =====================================================
 // 停止プラン（滑らか減速のみ）
@@ -366,7 +349,6 @@ function tick(now){
       setOffset(s.endY);
 
       engine.state = "stopped";
-      renderCenterResult();
 
       stopBtn.disabled = true;
       spinBtn.disabled = (COMP_MAPS.length === 0);
@@ -438,7 +420,6 @@ function buildMapCheckboxes(selectedKeys = null){
     }
 
     const span = document.createElement("span");
-    span.textContent = m.name;
     span.style.color = "rgba(255,255,255,.88)";
     span.style.fontWeight = "700";
     span.style.letterSpacing = ".02em";
@@ -476,8 +457,6 @@ function rebuild(){
   const h = getItemHeightPx();
   const base = Math.floor((copies / 2) * COMP_MAPS.length) * h;
   setOffset(base + h);
-
-  renderCenterResult();
 }
 
 function startSpin(){
@@ -485,8 +464,6 @@ function startSpin(){
 
   const { speedPx } = readSettings();
   engine.speed = speedPx;
-
-  clearResults();
 
   engine.state = "spinning";
   engine.lastNow = null;
@@ -521,11 +498,6 @@ function stopSpin(){
 function instantPick(){
   if (COMP_MAPS.length === 0) return;
 
-  clearResults();
-
-  const midIdx = randIndex();
-  pickedName.textContent = COMP_MAPS[midIdx]?.name ?? "—";
-
   engine.state = "stopped";
   stopBtn.disabled = true;
   spinBtn.disabled = (COMP_MAPS.length === 0);
@@ -548,7 +520,6 @@ spinBtn.addEventListener("click", () => {
 });
 
 stopBtn.addEventListener("click", () => stopSpin());
-rerollBtn.addEventListener("click", () => instantPick());
 
 [copiesInput, decelMsInput, speedPxInput].forEach(el => {
   el.addEventListener("change", () => {
@@ -570,8 +541,6 @@ updateMapChecksNote();
 
 if (COMP_MAPS.length > 0) {
   rebuild();
-} else {
-  clearResults();
 }
 
 attachMapImagesFromApi();
