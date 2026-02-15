@@ -8,6 +8,8 @@
 
 // 画像探索候補（フォルダ構成が変わってもつながるように複数候補を試す）
 const MAP_IMAGE_BASE_DIRS = [
+  "./image/png/",
+  "./image/",
   "./img/maps/",
   "./img/",
   "./images/maps/",
@@ -19,6 +21,7 @@ const MAP_IMAGE_BASE_DIRS = [
   "./IMG/",
 ];
 const MAP_IMAGE_EXTS = [".png", ".webp", ".jpg", ".jpeg"];
+const VALORANT_MAPS_API = "https://valorant-api.com/v1/maps?language=en-US";
 
 function buildImageCandidates(key){
   const files = [key, key.toLowerCase()];
@@ -36,6 +39,48 @@ function buildImageCandidates(key){
     }
   }
   return candidates;
+}
+
+function normalizeMapKey(name = ""){
+  return name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z]/g, "");
+}
+
+async function attachMapImagesFromApi(){
+  try {
+    const res = await fetch(VALORANT_MAPS_API);
+    if (!res.ok) return;
+
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const apiByKey = new Map();
+
+    for (const row of rows){
+      const displayName = row?.displayName;
+      const splash = row?.splash || row?.listViewIcon || row?.displayIcon;
+      if (!displayName || !splash) continue;
+      apiByKey.set(normalizeMapKey(displayName), splash);
+    }
+
+    let patched = false;
+    for (const m of ALL_MAPS){
+      const remote = apiByKey.get(normalizeMapKey(m.name));
+      if (!remote) continue;
+      if (!m.imgs.includes(remote)) {
+        m.imgs.push(remote);
+        patched = true;
+      }
+    }
+
+    if (patched && engine.state !== "spinning" && engine.state !== "smooth") {
+      const selectedKeys = new Set(readEnabledKeys());
+      buildMapCheckboxes(selectedKeys);
+      rebuildCompMapsFromChecks();
+      updateMapChecksNote();
+      rebuild();
+    }
+  } catch (e) {
+    // API取得失敗時はローカル候補 + fallback で動作継続
+  }
 }
 
 // マップ一覧（全マップを選択可能にする）
@@ -224,7 +269,7 @@ function randIndex(){
 }
 
 // =====================================================
-// 3段表示（上・中央・下）
+// 中央結果表示
 // =====================================================
 function centeredItemIndex(){
   const h = getItemHeightPx();
@@ -237,22 +282,15 @@ function toMapIndex(itemIndex){
   if (n === 0) return 0;
   return ((itemIndex % n) + n) % n;
 }
-function getTopMidBottomNames(){
+function getCenteredMapName(){
   const n = COMP_MAPS.length;
-  if (n === 0) return { top:"—", mid:"—", bot:"—" };
+  if (n === 0) return "—";
 
   const midItem = centeredItemIndex();
-  const topItem = midItem - 1;
-  const botItem = midItem + 1;
-
-  const top = COMP_MAPS[toMapIndex(topItem)]?.name ?? "—";
-  const mid = COMP_MAPS[toMapIndex(midItem)]?.name ?? "—";
-  const bot = COMP_MAPS[toMapIndex(botItem)]?.name ?? "—";
-  return { top, mid, bot };
+  return COMP_MAPS[toMapIndex(midItem)]?.name ?? "—";
 }
-function renderTopMidBottom(){
-  const { mid } = getTopMidBottomNames();
-  pickedName.textContent = mid; // 最終決定は中央
+function renderCenterResult(){
+  pickedName.textContent = getCenteredMapName();
 }
 
 function clearResults(){
@@ -328,7 +366,7 @@ function tick(now){
       setOffset(s.endY);
 
       engine.state = "stopped";
-      renderTopMidBottom();
+      renderCenterResult();
 
       stopBtn.disabled = true;
       spinBtn.disabled = (COMP_MAPS.length === 0);
@@ -439,7 +477,7 @@ function rebuild(){
   const base = Math.floor((copies / 2) * COMP_MAPS.length) * h;
   setOffset(base + h);
 
-  renderTopMidBottom();
+  renderCenterResult();
 }
 
 function startSpin(){
