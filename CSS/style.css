@@ -247,8 +247,23 @@ body{
 }
 .checksGrid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 8px;
+}
+.mapCheckThumb{
+  width:72px;
+  height:44px;
+  border-radius:8px;
+  overflow:hidden;
+  flex: 0 0 72px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.16);
+}
+.mapCheckThumb img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
 }
 .checksNote{
   margin-top: 8px;

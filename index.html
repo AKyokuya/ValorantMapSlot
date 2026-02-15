@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VALORANT Map Slot (Single / 3 Rows)</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./CSS/style.css" />
 </head>
 <body>
   <main class="wrap">
@@ -26,12 +26,8 @@
         <div class="centerline" aria-hidden="true"></div>
       </div>
 
-      <!-- 表示（上・中央・下 + 決定） -->
+      <!-- 表示（最終決定のみ） -->
       <div class="results">
-        <div class="row"><div class="label">上:</div><div id="pickedTop" class="picked small">—</div></div>
-        <div class="row"><div class="label">中央:</div><div id="pickedMid" class="picked small">—</div></div>
-        <div class="row"><div class="label">下:</div><div id="pickedBottom" class="picked small">—</div></div>
-
         <div class="final">
           <div class="label">最終決定（中央）:</div>
           <div id="pickedName" class="picked">—</div>
@@ -81,6 +77,6 @@
     </section>
   </main>
 
-  <script src="./app.js"></script>
+  <script src="./JS/script.js"></script>
 </body>
 </html>
