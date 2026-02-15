@@ -63,10 +63,6 @@ const DEFAULT_ENABLED_KEYS = new Set([
 // DOM
 // =====================================================
 const pickedName   = document.getElementById("pickedName");
-const pickedTop    = document.getElementById("pickedTop");
-const pickedMid    = document.getElementById("pickedMid");
-const pickedBottom = document.getElementById("pickedBottom");
-
 const spinBtn   = document.getElementById("spinBtn");
 const stopBtn   = document.getElementById("stopBtn");
 const rerollBtn = document.getElementById("rerollBtn");
@@ -255,17 +251,11 @@ function getTopMidBottomNames(){
   return { top, mid, bot };
 }
 function renderTopMidBottom(){
-  const { top, mid, bot } = getTopMidBottomNames();
-  pickedTop.textContent = top;
-  pickedMid.textContent = mid;
-  pickedBottom.textContent = bot;
+  const { mid } = getTopMidBottomNames();
   pickedName.textContent = mid; // 最終決定は中央
 }
 
 function clearResults(){
-  pickedTop.textContent = "—";
-  pickedMid.textContent = "—";
-  pickedBottom.textContent = "—";
   pickedName.textContent = "—";
 }
 
@@ -353,10 +343,36 @@ function tick(now){
   }
 }
 
+function makeMapPreview(m){
+  const wrap = document.createElement("span");
+  wrap.className = "mapCheckThumb";
+
+  const candidates = Array.isArray(m.imgs) ? [...m.imgs] : [];
+  if (candidates.length === 0) return wrap;
+
+  const img = document.createElement("img");
+  img.alt = `${m.name} preview`;
+  img.loading = "lazy";
+
+  const tryNextImage = () => {
+    const next = candidates.shift();
+    if (!next) {
+      img.remove();
+      return;
+    }
+    img.src = next;
+  };
+
+  img.addEventListener("error", tryNextImage);
+  tryNextImage();
+  wrap.appendChild(img);
+  return wrap;
+}
+
 // =====================================================
 // UI：チェックボックス生成
 // =====================================================
-function buildMapCheckboxes(){
+function buildMapCheckboxes(selectedKeys = null){
   mapChecks.innerHTML = "";
   const frag = document.createDocumentFragment();
 
@@ -372,10 +388,16 @@ function buildMapCheckboxes(){
     label.style.cursor = "pointer";
     label.style.userSelect = "none";
 
+    const thumb = makeMapPreview(m);
+
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.dataset.mapkey = m.key;
-    cb.checked = DEFAULT_ENABLED_KEYS.has(m.key);
+    if (selectedKeys instanceof Set) {
+      cb.checked = selectedKeys.has(m.key);
+    } else {
+      cb.checked = DEFAULT_ENABLED_KEYS.has(m.key);
+    }
 
     const span = document.createElement("span");
     span.textContent = m.name;
@@ -394,6 +416,7 @@ function buildMapCheckboxes(){
       rebuild();
     });
 
+    label.appendChild(thumb);
     label.appendChild(cb);
     label.appendChild(span);
     frag.appendChild(label);
@@ -463,13 +486,6 @@ function instantPick(){
   clearResults();
 
   const midIdx = randIndex();
-  const n = COMP_MAPS.length;
-  const topIdx = (midIdx - 1 + n) % n;
-  const botIdx = (midIdx + 1) % n;
-
-  pickedTop.textContent = COMP_MAPS[topIdx]?.name ?? "—";
-  pickedMid.textContent = COMP_MAPS[midIdx]?.name ?? "—";
-  pickedBottom.textContent = COMP_MAPS[botIdx]?.name ?? "—";
   pickedName.textContent = COMP_MAPS[midIdx]?.name ?? "—";
 
   engine.state = "stopped";
@@ -519,3 +535,5 @@ if (COMP_MAPS.length > 0) {
 } else {
   clearResults();
 }
+
+attachMapImagesFromApi();
