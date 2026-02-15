@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VALORANT Map Slot (Single / 3 Rows)</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <h1>VALORANT マップ抽選スロット（3段表示）</h1>
+      <p class="sub">SPINで回転、STOPで減速して中央が決定（候補はチェックしたものだけ）</p>
+    </header>
+
+    <section class="panel">
+
+      <!-- スロット本体（1つ） -->
+      <div class="slot" aria-label="slot (single reel)">
+        <div class="window" data-reel="0">
+          <div class="reel"></div>
+          <div class="shine"></div>
+        </div>
+
+        <!-- 当選位置（中央段）の目印 -->
+        <div class="centerline" aria-hidden="true"></div>
+      </div>
+
+      <!-- 表示（上・中央・下 + 決定） -->
+      <div class="results">
+        <div class="row"><div class="label">上:</div><div id="pickedTop" class="picked small">—</div></div>
+        <div class="row"><div class="label">中央:</div><div id="pickedMid" class="picked small">—</div></div>
+        <div class="row"><div class="label">下:</div><div id="pickedBottom" class="picked small">—</div></div>
+
+        <div class="final">
+          <div class="label">最終決定（中央）:</div>
+          <div id="pickedName" class="picked">—</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="spinBtn" class="btn primary">SPIN</button>
+        <button id="stopBtn" class="btn" disabled>STOP</button>
+        <button id="rerollBtn" class="btn ghost">即決（回さず抽選）</button>
+      </div>
+
+      <!-- 設定 -->
+      <details class="settings">
+        <summary>設定</summary>
+
+        <div class="grid">
+          <label>
+            <span>減速時間（ms）</span>
+            <input id="decelMs" type="number" min="1000" max="12000" step="200" value="4200" />
+          </label>
+
+          <label>
+            <span>初速（px/s）</span>
+            <input id="speedPx" type="number" min="600" max="9000" step="100" value="3800" />
+          </label>
+
+          <label>
+            <span>リール複製数</span>
+            <input id="copies" type="number" min="4" max="40" step="1" value="14" />
+          </label>
+        </div>
+
+        <div class="checks">
+          <div class="checksTitle">候補マップ（チェックしたものだけ抽選）</div>
+          <div id="mapChecks" class="checksGrid"></div>
+          <div id="mapChecksNote" class="checksNote"></div>
+          <div class="checksHint">
+            ※ 回転中（SPIN〜STOP完了まで）は候補を変更できません。
+          </div>
+        </div>
+      </details>
+
+      <footer class="foot">
+        <small>※「競技プール」は時期で変わるので、必要に応じて初期ON候補を変更してください。</small>
+      </footer>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
