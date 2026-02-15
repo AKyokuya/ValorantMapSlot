@@ -8,8 +8,6 @@
 
 // 画像探索候補（フォルダ構成が変わってもつながるように複数候補を試す）
 const MAP_IMAGE_BASE_DIRS = [
-  "./image/png/",
-  "./image/",
   "./img/maps/",
   "./img/",
   "./images/maps/",
@@ -21,7 +19,6 @@ const MAP_IMAGE_BASE_DIRS = [
   "./IMG/",
 ];
 const MAP_IMAGE_EXTS = [".png", ".webp", ".jpg", ".jpeg"];
-const VALORANT_MAPS_API = "https://valorant-api.com/v1/maps?language=en-US";
 
 function buildImageCandidates(key){
   const files = [key, key.toLowerCase()];
@@ -39,48 +36,6 @@ function buildImageCandidates(key){
     }
   }
   return candidates;
-}
-
-function normalizeMapKey(name = ""){
-  return name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z]/g, "");
-}
-
-async function attachMapImagesFromApi(){
-  try {
-    const res = await fetch(VALORANT_MAPS_API);
-    if (!res.ok) return;
-
-    const json = await res.json();
-    const rows = Array.isArray(json?.data) ? json.data : [];
-    const apiByKey = new Map();
-
-    for (const row of rows){
-      const displayName = row?.displayName;
-      const splash = row?.splash || row?.listViewIcon || row?.displayIcon;
-      if (!displayName || !splash) continue;
-      apiByKey.set(normalizeMapKey(displayName), splash);
-    }
-
-    let patched = false;
-    for (const m of ALL_MAPS){
-      const remote = apiByKey.get(normalizeMapKey(m.name));
-      if (!remote) continue;
-      if (!m.imgs.includes(remote)) {
-        m.imgs.push(remote);
-        patched = true;
-      }
-    }
-
-    if (patched && engine.state !== "spinning" && engine.state !== "smooth") {
-      const selectedKeys = new Set(readEnabledKeys());
-      buildMapCheckboxes(selectedKeys);
-      rebuildCompMapsFromChecks();
-      updateMapChecksNote();
-      rebuild();
-    }
-  } catch (e) {
-    // API取得失敗時はローカル候補 + fallback で動作継続
-  }
 }
 
 // マップ一覧（全マップを選択可能にする）
