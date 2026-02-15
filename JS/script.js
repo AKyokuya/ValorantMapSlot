@@ -6,21 +6,52 @@
 // - 停止後に二度動かない（endYスナップ + RAF停止 + smooth移行前にRAF停止）
 // =====================================================
 
-const MAP_IMG_DIR = "./img/maps/";
-const MAP_IMG_EXT = ".png"; // ".png" / ".webp" にするならここだけ変更
+// 画像探索候補（フォルダ構成が変わってもつながるように複数候補を試す）
+const MAP_IMAGE_BASE_DIRS = [
+  "./img/maps/",
+  "./img/",
+  "./images/maps/",
+  "./images/",
+  "./assets/maps/",
+  "./maps/",
+  "./Map/",
+  "./IMG/maps/",
+  "./IMG/",
+];
+const MAP_IMAGE_EXTS = [".png", ".webp", ".jpg", ".jpeg"];
 
-// マップ一覧（画像ファイル名は key に合わせる： ./img/maps/<key>.jpg）
+function buildImageCandidates(key){
+  const files = [key, key.toLowerCase()];
+  const seen = new Set();
+  const candidates = [];
+
+  for (const dir of MAP_IMAGE_BASE_DIRS){
+    for (const name of files){
+      for (const ext of MAP_IMAGE_EXTS){
+        const path = `${dir}${name}${ext}`;
+        if (seen.has(path)) continue;
+        seen.add(path);
+        candidates.push(path);
+      }
+    }
+  }
+  return candidates;
+}
+
+// マップ一覧（全マップを選択可能にする）
 const ALL_MAPS = [
-  { key: "sunset",  name: "Sunset",  img: MAP_IMG_DIR + "sunset"  + MAP_IMG_EXT },
-  { key: "bind",    name: "Bind",    img: MAP_IMG_DIR + "bind"    + MAP_IMG_EXT },
-  { key: "haven",   name: "Haven",   img: MAP_IMG_DIR + "haven"   + MAP_IMG_EXT },
-  { key: "split",   name: "Split",   img: MAP_IMG_DIR + "split"   + MAP_IMG_EXT },
-  { key: "abyss",   name: "Abyss",   img: MAP_IMG_DIR + "abyss"   + MAP_IMG_EXT },
-  { key: "pearl",   name: "Pearl",   img: MAP_IMG_DIR + "pearl"   + MAP_IMG_EXT },
-  { key: "corrode", name: "Corrode", img: MAP_IMG_DIR + "corrode" + MAP_IMG_EXT },
-
-  // 追加したい場合はここに足す（チェック候補として出る）
-  // { key: "ascent", name: "Ascent", img: MAP_IMG_DIR + "ascent" + MAP_IMG_EXT },
+  { key: "abyss",    name: "Abyss",    imgs: buildImageCandidates("abyss") },
+  { key: "ascent",   name: "Ascent",   imgs: buildImageCandidates("ascent") },
+  { key: "bind",     name: "Bind",     imgs: buildImageCandidates("bind") },
+  { key: "breeze",   name: "Breeze",   imgs: buildImageCandidates("breeze") },
+  { key: "corrode",  name: "Corrode",  imgs: buildImageCandidates("corrode") },
+  { key: "fracture", name: "Fracture", imgs: buildImageCandidates("fracture") },
+  { key: "haven",    name: "Haven",    imgs: buildImageCandidates("haven") },
+  { key: "icebox",   name: "Icebox",   imgs: buildImageCandidates("icebox") },
+  { key: "lotus",    name: "Lotus",    imgs: buildImageCandidates("lotus") },
+  { key: "pearl",    name: "Pearl",    imgs: buildImageCandidates("pearl") },
+  { key: "split",    name: "Split",    imgs: buildImageCandidates("split") },
+  { key: "sunset",   name: "Sunset",   imgs: buildImageCandidates("sunset") },
 ];
 
 // 指定プール（重複 sunset は Set で1つになります）
@@ -103,18 +134,26 @@ function buildReel(copies = 14) {
       item.className = "item";
       item.dataset.name = m.name;
 
-      if (m.img) {
+      const candidates = Array.isArray(m.imgs) ? [...m.imgs] : [];
+      if (candidates.length > 0) {
         const img = document.createElement("img");
         img.alt = m.name;
         img.loading = "lazy";
-        img.src = m.img;
 
-        // 画像が無い/読み込み失敗 → fallback に落とす
-        img.addEventListener("error", () => {
-          img.remove();
-          item.appendChild(makeFallback(m.name));
-        });
+        const tryNextImage = () => {
+          const next = candidates.shift();
+          if (!next) {
+            img.remove();
+            item.appendChild(makeFallback(m.name));
+            return;
+          }
+          img.src = next;
+        };
 
+        // 画像が無い/読み込み失敗 → 次候補を試し、尽きたら fallback
+        img.addEventListener("error", tryNextImage);
+
+        tryNextImage();
         item.appendChild(img);
       } else {
         item.appendChild(makeFallback(m.name));
