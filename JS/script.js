@@ -1,12 +1,7 @@
 // =====================================================
 // VALORANT Map Slot (Single Reel / 3 Rows)
-// - 候補は設定のチェックボックスで選択
-// - 画像が無くても fallback で動作
-// - 減速は smooth のみ（刻み無し）
-// - 停止後に二度動かない（endYスナップ + RAF停止 + smooth移行前にRAF停止）
 // =====================================================
 
-// 画像探索候補（フォルダ構成が変わってもつながるように複数候補を試す）
 const MAP_IMAGE_BASE_DIRS = [
   "./image/png/",
   "./image/",
@@ -22,6 +17,13 @@ const MAP_IMAGE_BASE_DIRS = [
 ];
 const MAP_IMAGE_EXTS = [".png", ".webp", ".jpg", ".jpeg"];
 const VALORANT_MAPS_API = "https://valorant-api.com/v1/maps?language=en-US";
+const REEL_COPIES = 14;
+
+const SPEED_PRESETS = {
+  slow: { label: "ゆっくり", speedPx: 2800, decelMs: 6400 },
+  normal: { label: "普通", speedPx: 4000, decelMs: 5600 },
+  fast: { label: "高速", speedPx: 5200, decelMs: 5200 },
+};
 
 function buildImageCandidates(key){
   const files = [key, key.toLowerCase()];
@@ -43,6 +45,11 @@ function buildImageCandidates(key){
 
 function normalizeMapKey(name = ""){
   return name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z]/g, "");
+}
+
+function parseModeFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get("mode");
 }
 
 async function attachMapImagesFromApi(){
@@ -78,12 +85,11 @@ async function attachMapImagesFromApi(){
       updateMapChecksNote();
       rebuild();
     }
-  } catch (e) {
+  } catch (_e) {
     // API取得失敗時はローカル候補 + fallback で動作継続
   }
 }
 
-// マップ一覧（全マップを選択可能にする）
 const ALL_MAPS = [
   { key: "abyss",    name: "Abyss",    imgs: buildImageCandidates("abyss") },
   { key: "ascent",   name: "Ascent",   imgs: buildImageCandidates("ascent") },
@@ -99,31 +105,52 @@ const ALL_MAPS = [
   { key: "sunset",   name: "Sunset",   imgs: buildImageCandidates("sunset") },
 ];
 
-// 指定プール（重複 sunset は Set で1つになります）
 const DEFAULT_ENABLED_KEYS = new Set([
-  "breeze","bind","haven","split","abyss","pearl","corrode"
+  "breeze", "bind", "haven", "split", "abyss", "pearl", "corrode"
 ]);
 
-// =====================================================
-// DOM
-// =====================================================
-const spinBtn   = document.getElementById("spinBtn");
-const stopBtn   = document.getElementById("stopBtn");
-
-const decelMsInput = document.getElementById("decelMs");
-const speedPxInput = document.getElementById("speedPx");
-const copiesInput  = document.getElementById("copies");
+const spinBtn = document.getElementById("spinBtn");
+const stopBtn = document.getElementById("stopBtn");
+const settingsDetails = document.querySelector(".settings");
+const controlsEl = document.querySelector(".controls");
+const presetButtons = Array.from(document.querySelectorAll("#speedPresets [data-preset]"));
 
 const windowEl = document.querySelector(".window");
-const reelEl   = windowEl.querySelector(".reel");
+const reelEl = windowEl.querySelector(".reel");
 
 const mapChecks = document.getElementById("mapChecks");
 const mapChecksNote = document.getElementById("mapChecksNote");
+const resultFinal = document.querySelector(".results .final");
 
-// =====================================================
-// 候補マップ（チェック状態から生成）
-// =====================================================
+let currentPresetKey = "normal";
 let COMP_MAPS = [];
+
+const engine = {
+  state: "idle",
+  rafId: null,
+  lastNow: null,
+  offsetY: 0,
+  speed: SPEED_PRESETS.normal.speedPx,
+  smooth: { startT: 0, endT: 0, startY: 0, endY: 0 },
+  targetIndex: 0,
+};
+
+function getActivePreset(){
+  return SPEED_PRESETS[currentPresetKey] ?? SPEED_PRESETS.normal;
+}
+
+function setPreset(nextKey){
+  if (!SPEED_PRESETS[nextKey]) return;
+  const busy = (engine.state === "spinning" || engine.state === "smooth");
+  if (busy) return;
+
+  currentPresetKey = nextKey;
+  for (const btn of presetButtons){
+    const active = btn.dataset.preset === nextKey;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  }
+}
 
 function readEnabledKeys(){
   const keys = [];
@@ -140,14 +167,12 @@ function rebuildCompMapsFromChecks(){
 
 function updateMapChecksNote(){
   const n = COMP_MAPS.length;
+  mapChecksNote.textContent = n > 0 ? `${n} マップ選択中` : "最低1つ以上のマップを選んでください";
 
   const busy = (engine.state === "spinning" || engine.state === "smooth");
   spinBtn.disabled = busy ? true : (n === 0);
 }
 
-// =====================================================
-// リール構築
-// =====================================================
 function makeFallback(name){
   const fb = document.createElement("div");
   fb.className = "fallback";
@@ -155,7 +180,7 @@ function makeFallback(name){
   return fb;
 }
 
-function buildReel(copies = 14) {
+function buildReel(copies = REEL_COPIES) {
   reelEl.innerHTML = "";
   const frag = document.createDocumentFragment();
 
@@ -181,9 +206,7 @@ function buildReel(copies = 14) {
           img.src = next;
         };
 
-        // 画像が無い/読み込み失敗 → 次候補を試し、尽きたら fallback
         img.addEventListener("error", tryNextImage);
-
         tryNextImage();
         item.appendChild(img);
       } else {
@@ -197,33 +220,37 @@ function buildReel(copies = 14) {
   reelEl.appendChild(frag);
 }
 
-function getItemHeightPx() {
-  const anyItem = document.querySelector(".item");
-  return anyItem ? anyItem.getBoundingClientRect().height : 220;
+function clearResultEffects(){
+  reelEl.classList.remove("has-winner");
+  reelEl.querySelectorAll(".item.winner").forEach(item => item.classList.remove("winner"));
 }
 
-// =====================================================
-// エンジン（刻みなし / 停止後に二度動かない）
-// =====================================================
-const engine = {
-  state: "idle", // idle | spinning | smooth | stopped
-  rafId: null,
-  lastNow: null,
-  offsetY: 0,
-  speed: 3800,
+function applyResultEffects(){
+  clearResultEffects();
 
-  smooth: { startT: 0, endT: 0, startY: 0, endY: 0 },
-  targetIndex: 0,
-};
+  const idx = centeredItemIndex();
+  const item = reelEl.querySelector(`.item:nth-child(${idx + 1})`);
+  if (!item) return;
+
+  reelEl.classList.add("has-winner");
+  item.classList.add("winner");
+}
+
+function showFinalResult(){
+  const name = getCenteredMapName();
+  resultFinal.innerHTML = `<span class="label">当選マップ</span><span class="picked">${name}</span>`;
+}
+
+function getItemHeightPx() {
+  const anyItem = reelEl.querySelector(".item");
+  return anyItem ? anyItem.getBoundingClientRect().height : 220;
+}
 
 function setOffset(y){
   engine.offsetY = y;
   reelEl.style.transform = `translateY(${-y}px)`;
 }
 
-/**
- * 無限回転用の巻き戻し（spinning中のみ）
- */
 function wrapOffset(){
   const h = getItemHeightPx();
   const totalItems = reelEl.querySelectorAll(".item").length;
@@ -240,38 +267,23 @@ function easeOutCubic(t){
   return 1 - Math.pow(1 - t, 3);
 }
 
-function clampNum(v, min, max, fallback){
-  const n = Number(v);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, n));
-}
-
-function readSettings(){
-  // ★指定：fallbackを5200に
-  const decelMs = clampNum(decelMsInput.value, 1000, 12000, 5200);
-  const speedPx = clampNum(speedPxInput.value, 600, 9000, 5200);
-  const copies  = clampNum(copiesInput.value, 4, 40, 14);
-  return { decelMs, speedPx, copies };
-}
-
 function randIndex(){
   return Math.floor(Math.random() * COMP_MAPS.length);
 }
 
-// =====================================================
-// 中央結果表示
-// =====================================================
 function centeredItemIndex(){
   const h = getItemHeightPx();
   const winH = windowEl.getBoundingClientRect().height;
   const center = engine.offsetY + winH / 2;
   return Math.floor(center / h);
 }
+
 function toMapIndex(itemIndex){
   const n = COMP_MAPS.length;
   if (n === 0) return 0;
   return ((itemIndex % n) + n) % n;
 }
+
 function getCenteredMapName(){
   const n = COMP_MAPS.length;
   if (n === 0) return "—";
@@ -280,9 +292,6 @@ function getCenteredMapName(){
   return COMP_MAPS[toMapIndex(midItem)]?.name ?? "—";
 }
 
-// =====================================================
-// 停止プラン（滑らか減速のみ）
-// =====================================================
 function makeStopPlan(targetIndex, decelMs){
   const n = COMP_MAPS.length;
   if (n === 0) return;
@@ -295,7 +304,6 @@ function makeStopPlan(targetIndex, decelMs){
   const nowY = engine.offsetY;
   const currentItem = Math.floor((nowY + centerInWindow) / h);
 
-  // いまより先で targetIndex が中央に来る最初の itemIndex
   let best = null;
   for (let k = 1; k <= totalItems; k++){
     const idx = currentItem + k;
@@ -304,11 +312,9 @@ function makeStopPlan(targetIndex, decelMs){
   }
   if (best == null) best = currentItem + n + targetIndex;
 
-  // 停止まで長く（好みで調整）
-  const EXTRA_LOOPS = 3; // 2〜4推奨
+  const EXTRA_LOOPS = 3;
   best += EXTRA_LOOPS * n;
 
-  // item中心をwindow中心に合わせる
   const targetOffset = (best + 0.5) * h - centerInWindow;
 
   const nowT = performance.now();
@@ -321,9 +327,6 @@ function makeStopPlan(targetIndex, decelMs){
   engine.targetIndex = targetIndex;
 }
 
-// =====================================================
-// tick
-// =====================================================
 function tick(now){
   if (engine.state === "spinning"){
     const dt = engine.lastNow == null ? 0 : (now - engine.lastNow) / 1000;
@@ -345,10 +348,11 @@ function tick(now){
     setOffset(s.startY + (s.endY - s.startY) * e);
 
     if (clamped >= 1){
-      // ★重要：必ず endY にスナップ → “停止後に2回目動く” を防ぐ
       setOffset(s.endY);
-
       engine.state = "stopped";
+
+      applyResultEffects();
+      showFinalResult();
 
       stopBtn.disabled = true;
       spinBtn.disabled = (COMP_MAPS.length === 0);
@@ -359,7 +363,6 @@ function tick(now){
     }
 
     engine.rafId = requestAnimationFrame(tick);
-    return;
   }
 }
 
@@ -389,9 +392,6 @@ function makeMapPreview(m){
   return wrap;
 }
 
-// =====================================================
-// UI：チェックボックス生成
-// =====================================================
 function buildMapCheckboxes(selectedKeys = null){
   mapChecks.innerHTML = "";
   const frag = document.createDocumentFragment();
@@ -413,13 +413,12 @@ function buildMapCheckboxes(selectedKeys = null){
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.dataset.mapkey = m.key;
-    if (selectedKeys instanceof Set) {
-      cb.checked = selectedKeys.has(m.key);
-    } else {
-      cb.checked = DEFAULT_ENABLED_KEYS.has(m.key);
-    }
+    cb.checked = selectedKeys instanceof Set
+      ? selectedKeys.has(m.key)
+      : DEFAULT_ENABLED_KEYS.has(m.key);
 
     const span = document.createElement("span");
+    span.textContent = m.name;
     span.style.color = "rgba(255,255,255,.88)";
     span.style.fontWeight = "700";
     span.style.letterSpacing = ".02em";
@@ -444,26 +443,23 @@ function buildMapCheckboxes(selectedKeys = null){
   mapChecks.appendChild(frag);
 }
 
-// =====================================================
-// 組み立て
-// =====================================================
 function rebuild(){
   if (COMP_MAPS.length === 0) return;
 
-  const { copies } = readSettings();
-  buildReel(copies);
+  clearResultEffects();
+  buildReel(REEL_COPIES);
 
-  // 初期位置を真ん中付近に
   const h = getItemHeightPx();
-  const base = Math.floor((copies / 2) * COMP_MAPS.length) * h;
+  const base = Math.floor((REEL_COPIES / 2) * COMP_MAPS.length) * h;
   setOffset(base + h);
 }
 
 function startSpin(){
   if (COMP_MAPS.length === 0) return;
 
-  const { speedPx } = readSettings();
-  engine.speed = speedPx;
+  clearResultEffects();
+  const preset = getActivePreset();
+  engine.speed = preset.speedPx;
 
   engine.state = "spinning";
   engine.lastNow = null;
@@ -479,68 +475,62 @@ function stopSpin(){
   if (engine.state !== "spinning") return;
   if (COMP_MAPS.length === 0) return;
 
-  // ★回転中のrafを止めてから減速へ
   cancelAnimationFrame(engine.rafId);
   engine.rafId = null;
 
-  const { decelMs } = readSettings();
+  const preset = getActivePreset();
   const target = randIndex();
 
   engine.state = "smooth";
   spinBtn.disabled = true;
   stopBtn.disabled = true;
 
-  makeStopPlan(target, decelMs);
+  makeStopPlan(target, preset.decelMs);
 
   engine.rafId = requestAnimationFrame(tick);
 }
 
-function instantPick(){
-  if (COMP_MAPS.length === 0) return;
-
-  engine.state = "stopped";
-  stopBtn.disabled = true;
-  spinBtn.disabled = (COMP_MAPS.length === 0);
-
-  cancelAnimationFrame(engine.rafId);
-  engine.rafId = null;
+function applyCleanModeIfNeeded(){
+  if (parseModeFromUrl() !== "clean") return;
+  document.body.classList.add("clean-mode");
+  if (settingsDetails) settingsDetails.open = false;
+  if (controlsEl) controlsEl.setAttribute("aria-hidden", "true");
 }
 
-// =====================================================
-// Events
-// =====================================================
-spinBtn.addEventListener("click", () => {
-  const busy = (engine.state === "spinning" || engine.state === "smooth");
-  if (busy) return;
+const hasRequiredDom = Boolean(
+  spinBtn && stopBtn && windowEl && reelEl && mapChecks && mapChecksNote && resultFinal
+);
 
-  rebuildCompMapsFromChecks();
-  updateMapChecksNote();
-  rebuild();
-  startSpin();
-});
-
-stopBtn.addEventListener("click", () => stopSpin());
-
-[copiesInput, decelMsInput, speedPxInput].forEach(el => {
-  el.addEventListener("change", () => {
+if (hasRequiredDom) {
+  spinBtn.addEventListener("click", () => {
     const busy = (engine.state === "spinning" || engine.state === "smooth");
     if (busy) return;
 
     rebuildCompMapsFromChecks();
     updateMapChecksNote();
     rebuild();
+    startSpin();
   });
-});
 
-// =====================================================
-// init
-// =====================================================
-buildMapCheckboxes();
-rebuildCompMapsFromChecks();
-updateMapChecksNote();
+  stopBtn.addEventListener("click", () => stopSpin());
 
-if (COMP_MAPS.length > 0) {
-  rebuild();
+  for (const btn of presetButtons){
+    btn.addEventListener("click", () => {
+      setPreset(btn.dataset.preset);
+    });
+  }
+
+  buildMapCheckboxes();
+  rebuildCompMapsFromChecks();
+  updateMapChecksNote();
+  setPreset("normal");
+  applyCleanModeIfNeeded();
+
+  if (COMP_MAPS.length > 0) {
+    rebuild();
+  }
+
+  attachMapImagesFromApi();
+} else {
+  console.error("初期化に必要なDOMが見つからないため、アプリを開始できませんでした。");
 }
-
-attachMapImagesFromApi();

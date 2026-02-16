@@ -41,20 +41,14 @@
         <summary>設定</summary>
 
         <div class="grid">
-          <label>
-            <span>減速時間（ms）</span>
-            <input id="decelMs" type="number" min="1000" max="12000" step="200" value="5200" />
-          </label>
-
-          <label>
-            <span>初速（px/s）</span>
-            <input id="speedPx" type="number" min="600" max="9000" step="100" value="5200" />
-          </label>
-
-          <label>
-            <span>リール複製数</span>
-            <input id="copies" type="number" min="4" max="40" step="1" value="14" />
-          </label>
+          <div class="presetBlock">
+            <div class="presetTitle">回転スピード</div>
+            <div id="speedPresets" class="presetButtons" role="group" aria-label="回転スピードのプリセット">
+              <button class="btn preset" type="button" data-preset="slow">ゆっくり</button>
+              <button class="btn preset active" type="button" data-preset="normal">普通</button>
+              <button class="btn preset" type="button" data-preset="fast">高速</button>
+            </div>
+          </div>
         </div>
 
         <div class="checks">
