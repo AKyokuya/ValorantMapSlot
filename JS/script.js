@@ -6,21 +6,113 @@
 // - 停止後に二度動かない（endYスナップ + RAF停止 + smooth移行前にRAF停止）
 // =====================================================
 
-const MAP_IMG_DIR = "./img/maps/";
-const MAP_IMG_EXT = ".png"; // ".png" / ".webp" にするならここだけ変更
+// 画像探索候補（フォルダ構成が変わってもつながるように複数候補を試す）
+const MAP_IMAGE_BASE_DIRS = [
+  "./image/png/",
+  "./image/",
+  "./img/maps/",
+  "./img/",
+  "./images/maps/",
+  "./images/",
+  "./assets/maps/",
+  "./maps/",
+  "./Map/",
+  "./IMG/maps/",
+  "./IMG/",
+];
+const MAP_IMAGE_EXTS = [".png", ".webp", ".jpg", ".jpeg"];
+const VALORANT_MAPS_API = "https://valorant-api.com/v1/maps?language=en-US";
 
-// マップ一覧（画像ファイル名は key に合わせる： ./img/maps/<key>.jpg）
+function buildImageCandidates(key, name = ""){
+  const normalize = (s) => String(s || "").trim();
+  const compact = (s) => normalize(s).replace(/\s+/g, "");
+
+  const keyBase = compact(key);
+  const nameBase = compact(name);
+  const pascalFromKey = keyBase ? keyBase.charAt(0).toUpperCase() + keyBase.slice(1).toLowerCase() : "";
+  const pascalFromName = nameBase ? nameBase.charAt(0).toUpperCase() + nameBase.slice(1) : "";
+
+  const files = [
+    keyBase,
+    keyBase.toLowerCase(),
+    keyBase.toUpperCase(),
+    pascalFromKey,
+    nameBase,
+    nameBase.toLowerCase(),
+    pascalFromName,
+  ].filter(Boolean);
+  const seen = new Set();
+  const candidates = [];
+
+  for (const dir of MAP_IMAGE_BASE_DIRS){
+    for (const name of files){
+      for (const ext of MAP_IMAGE_EXTS){
+        const path = `${dir}${name}${ext}`;
+        if (seen.has(path)) continue;
+        seen.add(path);
+        candidates.push(path);
+      }
+    }
+  }
+  return candidates;
+}
+
+function normalizeMapKey(name = ""){
+  return name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z]/g, "");
+}
+
+async function attachMapImagesFromApi(){
+  try {
+    const res = await fetch(VALORANT_MAPS_API);
+    if (!res.ok) return;
+
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const apiByKey = new Map();
+
+    for (const row of rows){
+      const displayName = row?.displayName;
+      const splash = row?.splash || row?.listViewIcon || row?.displayIcon;
+      if (!displayName || !splash) continue;
+      apiByKey.set(normalizeMapKey(displayName), splash);
+    }
+
+    let patched = false;
+    for (const m of ALL_MAPS){
+      const remote = apiByKey.get(normalizeMapKey(m.name));
+      if (!remote) continue;
+      if (!m.imgs.includes(remote)) {
+        m.imgs.push(remote);
+        patched = true;
+      }
+    }
+
+    if (patched && engine.state !== "spinning" && engine.state !== "smooth") {
+      const selectedKeys = new Set(readEnabledKeys());
+      buildMapCheckboxes(selectedKeys);
+      rebuildCompMapsFromChecks();
+      updateMapChecksNote();
+      rebuild();
+    }
+  } catch (e) {
+    // API取得失敗時はローカル候補 + fallback で動作継続
+  }
+}
+
+// マップ一覧（全マップを選択可能にする）
 const ALL_MAPS = [
-  { key: "sunset",  name: "Sunset",  img: MAP_IMG_DIR + "sunset"  + MAP_IMG_EXT },
-  { key: "bind",    name: "Bind",    img: MAP_IMG_DIR + "bind"    + MAP_IMG_EXT },
-  { key: "haven",   name: "Haven",   img: MAP_IMG_DIR + "haven"   + MAP_IMG_EXT },
-  { key: "split",   name: "Split",   img: MAP_IMG_DIR + "split"   + MAP_IMG_EXT },
-  { key: "abyss",   name: "Abyss",   img: MAP_IMG_DIR + "abyss"   + MAP_IMG_EXT },
-  { key: "pearl",   name: "Pearl",   img: MAP_IMG_DIR + "pearl"   + MAP_IMG_EXT },
-  { key: "corrode", name: "Corrode", img: MAP_IMG_DIR + "corrode" + MAP_IMG_EXT },
-
-  // 追加したい場合はここに足す（チェック候補として出る）
-  // { key: "ascent", name: "Ascent", img: MAP_IMG_DIR + "ascent" + MAP_IMG_EXT },
+  { key: "abyss",    name: "Abyss",    imgs: buildImageCandidates("abyss", "Abyss") },
+  { key: "ascent",   name: "Ascent",   imgs: buildImageCandidates("ascent", "Ascent") },
+  { key: "bind",     name: "Bind",     imgs: buildImageCandidates("bind", "Bind") },
+  { key: "breeze",   name: "Breeze",   imgs: buildImageCandidates("breeze", "Breeze") },
+  { key: "corrode",  name: "Corrode",  imgs: buildImageCandidates("corrode", "Corrode") },
+  { key: "fracture", name: "Fracture", imgs: buildImageCandidates("fracture", "Fracture") },
+  { key: "haven",    name: "Haven",    imgs: buildImageCandidates("haven", "Haven") },
+  { key: "icebox",   name: "Icebox",   imgs: buildImageCandidates("icebox", "Icebox") },
+  { key: "lotus",    name: "Lotus",    imgs: buildImageCandidates("lotus", "Lotus") },
+  { key: "pearl",    name: "Pearl",    imgs: buildImageCandidates("pearl", "Pearl") },
+  { key: "split",    name: "Split",    imgs: buildImageCandidates("split", "Split") },
+  { key: "sunset",   name: "Sunset",   imgs: buildImageCandidates("sunset", "Sunset") },
 ];
 
 // 指定プール（重複 sunset は Set で1つになります）
@@ -32,10 +124,6 @@ const DEFAULT_ENABLED_KEYS = new Set([
 // DOM
 // =====================================================
 const pickedName   = document.getElementById("pickedName");
-const pickedTop    = document.getElementById("pickedTop");
-const pickedMid    = document.getElementById("pickedMid");
-const pickedBottom = document.getElementById("pickedBottom");
-
 const spinBtn   = document.getElementById("spinBtn");
 const stopBtn   = document.getElementById("stopBtn");
 const rerollBtn = document.getElementById("rerollBtn");
@@ -103,18 +191,26 @@ function buildReel(copies = 14) {
       item.className = "item";
       item.dataset.name = m.name;
 
-      if (m.img) {
+      const candidates = Array.isArray(m.imgs) ? [...m.imgs] : [];
+      if (candidates.length > 0) {
         const img = document.createElement("img");
         img.alt = m.name;
         img.loading = "lazy";
-        img.src = m.img;
 
-        // 画像が無い/読み込み失敗 → fallback に落とす
-        img.addEventListener("error", () => {
-          img.remove();
-          item.appendChild(makeFallback(m.name));
-        });
+        const tryNextImage = () => {
+          const next = candidates.shift();
+          if (!next) {
+            img.remove();
+            item.appendChild(makeFallback(m.name));
+            return;
+          }
+          img.src = next;
+        };
 
+        // 画像が無い/読み込み失敗 → 次候補を試し、尽きたら fallback
+        img.addEventListener("error", tryNextImage);
+
+        tryNextImage();
         item.appendChild(img);
       } else {
         item.appendChild(makeFallback(m.name));
@@ -189,7 +285,7 @@ function randIndex(){
 }
 
 // =====================================================
-// 3段表示（上・中央・下）
+// 中央結果表示
 // =====================================================
 function centeredItemIndex(){
   const h = getItemHeightPx();
@@ -202,31 +298,18 @@ function toMapIndex(itemIndex){
   if (n === 0) return 0;
   return ((itemIndex % n) + n) % n;
 }
-function getTopMidBottomNames(){
+function getCenteredMapName(){
   const n = COMP_MAPS.length;
-  if (n === 0) return { top:"—", mid:"—", bot:"—" };
+  if (n === 0) return "—";
 
   const midItem = centeredItemIndex();
-  const topItem = midItem - 1;
-  const botItem = midItem + 1;
-
-  const top = COMP_MAPS[toMapIndex(topItem)]?.name ?? "—";
-  const mid = COMP_MAPS[toMapIndex(midItem)]?.name ?? "—";
-  const bot = COMP_MAPS[toMapIndex(botItem)]?.name ?? "—";
-  return { top, mid, bot };
+  return COMP_MAPS[toMapIndex(midItem)]?.name ?? "—";
 }
-function renderTopMidBottom(){
-  const { top, mid, bot } = getTopMidBottomNames();
-  pickedTop.textContent = top;
-  pickedMid.textContent = mid;
-  pickedBottom.textContent = bot;
-  pickedName.textContent = mid; // 最終決定は中央
+function renderCenterResult(){
+  pickedName.textContent = getCenteredMapName();
 }
 
 function clearResults(){
-  pickedTop.textContent = "—";
-  pickedMid.textContent = "—";
-  pickedBottom.textContent = "—";
   pickedName.textContent = "—";
 }
 
@@ -299,7 +382,7 @@ function tick(now){
       setOffset(s.endY);
 
       engine.state = "stopped";
-      renderTopMidBottom();
+      renderCenterResult();
 
       stopBtn.disabled = true;
       spinBtn.disabled = (COMP_MAPS.length === 0);
@@ -314,10 +397,36 @@ function tick(now){
   }
 }
 
+function makeMapPreview(m){
+  const wrap = document.createElement("span");
+  wrap.className = "mapCheckThumb";
+
+  const candidates = Array.isArray(m.imgs) ? [...m.imgs] : [];
+  if (candidates.length === 0) return wrap;
+
+  const img = document.createElement("img");
+  img.alt = `${m.name} preview`;
+  img.loading = "lazy";
+
+  const tryNextImage = () => {
+    const next = candidates.shift();
+    if (!next) {
+      img.remove();
+      return;
+    }
+    img.src = next;
+  };
+
+  img.addEventListener("error", tryNextImage);
+  tryNextImage();
+  wrap.appendChild(img);
+  return wrap;
+}
+
 // =====================================================
 // UI：チェックボックス生成
 // =====================================================
-function buildMapCheckboxes(){
+function buildMapCheckboxes(selectedKeys = null){
   mapChecks.innerHTML = "";
   const frag = document.createDocumentFragment();
 
@@ -333,10 +442,16 @@ function buildMapCheckboxes(){
     label.style.cursor = "pointer";
     label.style.userSelect = "none";
 
+    const thumb = makeMapPreview(m);
+
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.dataset.mapkey = m.key;
-    cb.checked = DEFAULT_ENABLED_KEYS.has(m.key);
+    if (selectedKeys instanceof Set) {
+      cb.checked = selectedKeys.has(m.key);
+    } else {
+      cb.checked = DEFAULT_ENABLED_KEYS.has(m.key);
+    }
 
     const span = document.createElement("span");
     span.textContent = m.name;
@@ -355,6 +470,7 @@ function buildMapCheckboxes(){
       rebuild();
     });
 
+    label.appendChild(thumb);
     label.appendChild(cb);
     label.appendChild(span);
     frag.appendChild(label);
@@ -377,7 +493,7 @@ function rebuild(){
   const base = Math.floor((copies / 2) * COMP_MAPS.length) * h;
   setOffset(base + h);
 
-  renderTopMidBottom();
+  renderCenterResult();
 }
 
 function startSpin(){
@@ -424,13 +540,6 @@ function instantPick(){
   clearResults();
 
   const midIdx = randIndex();
-  const n = COMP_MAPS.length;
-  const topIdx = (midIdx - 1 + n) % n;
-  const botIdx = (midIdx + 1) % n;
-
-  pickedTop.textContent = COMP_MAPS[topIdx]?.name ?? "—";
-  pickedMid.textContent = COMP_MAPS[midIdx]?.name ?? "—";
-  pickedBottom.textContent = COMP_MAPS[botIdx]?.name ?? "—";
   pickedName.textContent = COMP_MAPS[midIdx]?.name ?? "—";
 
   engine.state = "stopped";
@@ -480,3 +589,5 @@ if (COMP_MAPS.length > 0) {
 } else {
   clearResults();
 }
+
+attachMapImagesFromApi();
