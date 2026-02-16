@@ -493,36 +493,44 @@ function stopSpin(){
 function applyCleanModeIfNeeded(){
   if (parseModeFromUrl() !== "clean") return;
   document.body.classList.add("clean-mode");
-  settingsDetails.open = false;
-  controlsEl.setAttribute("aria-hidden", "true");
+  if (settingsDetails) settingsDetails.open = false;
+  if (controlsEl) controlsEl.setAttribute("aria-hidden", "true");
 }
 
-spinBtn.addEventListener("click", () => {
-  const busy = (engine.state === "spinning" || engine.state === "smooth");
-  if (busy) return;
+const hasRequiredDom = Boolean(
+  spinBtn && stopBtn && windowEl && reelEl && mapChecks && mapChecksNote && resultFinal
+);
 
+if (hasRequiredDom) {
+  spinBtn.addEventListener("click", () => {
+    const busy = (engine.state === "spinning" || engine.state === "smooth");
+    if (busy) return;
+
+    rebuildCompMapsFromChecks();
+    updateMapChecksNote();
+    rebuild();
+    startSpin();
+  });
+
+  stopBtn.addEventListener("click", () => stopSpin());
+
+  for (const btn of presetButtons){
+    btn.addEventListener("click", () => {
+      setPreset(btn.dataset.preset);
+    });
+  }
+
+  buildMapCheckboxes();
   rebuildCompMapsFromChecks();
   updateMapChecksNote();
-  rebuild();
-  startSpin();
-});
+  setPreset("normal");
+  applyCleanModeIfNeeded();
 
-stopBtn.addEventListener("click", () => stopSpin());
+  if (COMP_MAPS.length > 0) {
+    rebuild();
+  }
 
-for (const btn of presetButtons){
-  btn.addEventListener("click", () => {
-    setPreset(btn.dataset.preset);
-  });
+  attachMapImagesFromApi();
+} else {
+  console.error("初期化に必要なDOMが見つからないため、アプリを開始できませんでした。");
 }
-
-buildMapCheckboxes();
-rebuildCompMapsFromChecks();
-updateMapChecksNote();
-setPreset("normal");
-applyCleanModeIfNeeded();
-
-if (COMP_MAPS.length > 0) {
-  rebuild();
-}
-
-attachMapImagesFromApi();
