@@ -209,7 +209,7 @@ body{
 }
 .settings .grid{
   display:grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 10px;
   margin-top: 10px;
 }
@@ -279,7 +279,60 @@ body{
     --img-pad: 8px;
   }
   .window{ width: min(400px, 100%); }
-  .settings .grid{grid-template-columns: 1fr 1fr}
+  .settings .grid{grid-template-columns: 1fr}
   .mapCheckThumb{ width:120px; height:68px; }
   .checksGrid{ grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+}
+
+
+.presetBlock{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.presetTitle{
+  color: rgba(255,255,255,.85);
+  font-weight: 800;
+  font-size: 13px;
+}
+.presetButtons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.btn.preset{
+  min-width: 90px;
+  background: rgba(255,255,255,.04);
+}
+.btn.preset.active{
+  border-color: rgba(124,241,255,.72);
+  background: linear-gradient(135deg, rgba(74,163,255,.40), rgba(124,241,255,.28));
+  box-shadow: 0 0 0 1px rgba(124,241,255,.24) inset, 0 0 14px rgba(124,241,255,.35);
+}
+
+.reel.has-winner .item{
+  filter: brightness(.58) saturate(.72);
+  transition: transform .35s ease, filter .35s ease, box-shadow .35s ease;
+}
+.reel.has-winner .item.winner{
+  filter: brightness(1.15) saturate(1.15);
+  transform: scale(1.06);
+  z-index: 2;
+  box-shadow: 0 0 24px rgba(124,241,255,.35), inset 0 0 0 1px rgba(124,241,255,.45);
+}
+
+body.clean-mode .top,
+body.clean-mode .controls,
+body.clean-mode .settings{
+  display:none;
+}
+body.clean-mode .wrap{
+  max-width: 500px;
+  padding-top: 12px;
+}
+body.clean-mode .panel{
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
 }
