@@ -106,7 +106,7 @@ const ALL_AGENTS = [
   { key: "sova", name: "Sova", role: "initiator", imgs: buildImageCandidates("Agents", "Sova", true) },
   { key: "breach", name: "Breach", role: "initiator", imgs: buildImageCandidates("Agents", "Breach", true) },
   { key: "skye", name: "Skye", role: "initiator", imgs: buildImageCandidates("Agents", "Skye", true) },
-  { key: "kayo", name: "Kayo", role: "initiator", imgs: buildImageCandidates("Agents", "Kayo", true) },
+  { key: "kayo", name: "KayO", role: "initiator", imgs: buildImageCandidates("Agents", "KayO", true) },
   { key: "fade", name: "Fade", role: "initiator", imgs: buildImageCandidates("Agents", "Fade", true) },
   { key: "gekko", name: "Gekko", role: "initiator", imgs: buildImageCandidates("Agents", "Gekko", true) },
   { key: "tejo", name: "Tejo", role: "initiator", imgs: buildImageCandidates("Agents", "Tejo", true) },
