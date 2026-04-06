@@ -3,66 +3,145 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VALORANT Map Slot (Single / 3 Rows)</title>
+  <title>VALORANT Slot</title>
   <link rel="stylesheet" href="./CSS/style.css" />
 </head>
 <body>
+  <div id="drawerBackdrop" class="drawerBackdrop"></div>
+
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawerHead">
+      <div class="drawerTitle">MENU</div>
+      <button id="drawerCloseBtn" class="iconBtn" type="button" aria-label="close menu">×</button>
+    </div>
+
+    <nav class="drawerNav">
+      <button class="drawerLink active" type="button" data-page-target="mapPage">マップスロット</button>
+      <button class="drawerLink" type="button" data-page-target="agentPage">キャラスロット</button>
+    </nav>
+  </aside>
+
   <main class="wrap">
-    <header class="top">
-      <h1>VALORANT マップ抽選スロット</h1>
+    <header class="topbar">
+      <div class="topbarLeft">
+        <button id="menuBtn" class="iconBtn" type="button" aria-label="open menu">≡</button>
+        <div>
+          <h1>VALORANT 抽選スロット</h1>
+        </div>
+      </div>
     </header>
 
-    <section class="panel">
-
-      <!-- スロット本体（1つ） -->
-      <div class="slot" aria-label="slot (single reel)">
-        <div class="window" data-reel="0">
-          <div class="reel"></div>
-          <div class="shine"></div>
+    <section id="mapPage" class="page is-active">
+      <section class="panel">
+        <div class="pageTitleRow">
+          <h2>マップスロット</h2>
         </div>
 
-        <!-- 当選位置（中央段）の目印 -->
-        <div class="centerline" aria-hidden="true"></div>
-      </div>
-
-      <!-- 表示（最終決定のみ） -->
-      <div class="results">
-        <div class="final">
-        </div>
-      </div>
-
-      <div class="controls">
-        <button id="spinBtn" class="btn primary">SPIN</button>
-        <button id="stopBtn" class="btn" disabled>STOP</button>
-      </div>
-
-      <!-- 設定 -->
-      <details class="settings">
-        <summary>設定</summary>
-
-        <div class="grid">
-          <label>
-            <span>減速時間（ms）</span>
-            <input id="decelMs" type="number" min="1000" max="12000" step="200" value="5200" />
-          </label>
-
-          <label>
-            <span>初速（px/s）</span>
-            <input id="speedPx" type="number" min="600" max="9000" step="100" value="5200" />
-          </label>
-
-          <label>
-            <span>リール複製数</span>
-            <input id="copies" type="number" min="4" max="40" step="1" value="14" />
-          </label>
+        <div class="slot" aria-label="map slot">
+          <div class="window" data-kind="map">
+            <div class="reel"></div>
+            <div class="shine"></div>
+          </div>
+          <div class="centerline" aria-hidden="true"></div>
         </div>
 
-        <div class="checks">
-          <div class="checksTitle">マップ</div>
-          <div id="mapChecks" class="checksGrid"></div>
-          <div id="mapChecksNote" class="checksNote"></div>
+        <div class="results">
+          <div class="final">
+          </div>
         </div>
-      </details>
+
+        <div class="controls">
+          <button id="mapSpinBtn" class="btn primary">SPIN</button>
+          <button id="mapStopBtn" class="btn" disabled>STOP</button>
+        </div>
+
+        <details class="settings">
+          <summary>設定</summary>
+
+          <div class="grid">
+            <label>
+              <span>減速時間（ms）</span>
+              <input id="mapDecelMs" type="number" min="1000" max="12000" step="200" value="5200" />
+            </label>
+
+            <label>
+              <span>初速（px/s）</span>
+              <input id="mapSpeedPx" type="number" min="600" max="9000" step="100" value="5200" />
+            </label>
+
+            <label>
+              <span>リール複製数</span>
+              <input id="mapCopies" type="number" min="4" max="40" step="1" value="14" />
+            </label>
+          </div>
+
+          <div class="checks">
+            <div class="checksTitle">マップ</div>
+            <div id="mapChecks" class="checksGrid"></div>
+            <div id="mapChecksNote" class="checksNote"></div>
+          </div>
+        </details>
+      </section>
+    </section>
+
+    <section id="agentPage" class="page">
+      <section class="panel">
+        <div class="pageTitleRow">
+          <h2>キャラスロット</h2>
+        </div>
+
+        <div class="slot" aria-label="agent slot">
+          <div class="window" data-kind="agent">
+            <div class="reel"></div>
+            <div class="shine"></div>
+          </div>
+          <div class="centerline" aria-hidden="true"></div>
+        </div>
+
+        <div class="results">
+          <div class="final">
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="agentSpinBtn" class="btn primary">SPIN</button>
+          <button id="agentStopBtn" class="btn" disabled>STOP</button>
+        </div>
+
+        <details class="settings">
+          <summary>設定</summary>
+
+          <div class="grid">
+            <label>
+              <span>減速時間（ms）</span>
+              <input id="agentDecelMs" type="number" min="1000" max="12000" step="200" value="5200" />
+            </label>
+
+            <label>
+              <span>初速（px/s）</span>
+              <input id="agentSpeedPx" type="number" min="600" max="9000" step="100" value="5200" />
+            </label>
+
+            <label>
+              <span>リール複製数</span>
+              <input id="agentCopies" type="number" min="4" max="40" step="1" value="14" />
+            </label>
+          </div>
+
+          <div class="checks">
+            <div class="checksHead">
+              <div class="checksTitle">ロール</div>
+            </div>
+            <div id="agentRoleChecks" class="roleChecks"></div>
+          </div>
+
+          <div class="checks">
+            <div class="checksTitle">キャラ</div>
+            <div id="agentChecks" class="checksGrid agentChecksGrid"></div>
+            <div id="agentChecksNote" class="checksNote"></div>
+          </div>
+        </details>
+      </section>
     </section>
   </main>
 
