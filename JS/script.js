@@ -340,9 +340,16 @@ function createSlotApp(options){
         setOffset(s.endY);
         engine.state = "stopped";
 
+        const centerline = windowEl.parentElement.querySelector(".centerline");
+        centerline.classList.add("win");
+
+        setTimeout(() => {
+          centerline.classList.remove("win");
+        }, 2000);
+      
         stopBtn.disabled = true;
         spinBtn.disabled = (activeItems.length === 0);
-
+      
         cancelAnimationFrame(engine.rafId);
         engine.rafId = null;
         return;
@@ -360,6 +367,9 @@ function createSlotApp(options){
     engine.state = "spinning";
     engine.lastNow = null;
 
+    const centerline = windowEl.parentElement.querySelector(".centerline");
+    centerline.classList.remove("win");
+    
     spinBtn.disabled = true;
     stopBtn.disabled = false;
 

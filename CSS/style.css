@@ -220,6 +220,20 @@ h2{margin:0; font-size:20px}
   background:rgba(0,0,0,.20);
   box-shadow:0 0 0 1px rgba(124,241,255,.18) inset;
 }
+.centerline.win {
+  background: rgba(255,255,255,0.08);
+  box-shadow:
+    0 0 0 1px rgba(124,241,255,.35) inset,
+    0 0 20px rgba(124,241,255,.25),
+    0 0 40px rgba(74,163,255,.25);
+  transition: all 0.3s ease;
+}
+
+/* 少しだけ発光アニメ */
+.centerline.win::before,
+.centerline.win::after{
+  opacity: .6;
+}
 .centerline::before,
 .centerline::after{
   content:"";
